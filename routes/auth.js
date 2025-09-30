@@ -1,9 +1,11 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import Quota from '../models/Quota.js';
 import { protect } from '../middleware/auth.js';
+import emailService from '../services/emailService.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -66,6 +68,49 @@ router.post('/register', [
     // Create quota for user
     await Quota.createForUser(user._id, 'free');
 
+    // Generate email verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    user.emailVerificationToken = emailVerificationToken;
+    await user.save();
+
+    // Send verification email
+    try {
+      await emailService.sendEmail({
+        to: user.email,
+        subject: 'Verify Your Email - Marketing Firm',
+        content: {
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Welcome to Marketing Firm!</h2>
+              <p>Hi ${user.name},</p>
+              <p>Thank you for registering with Marketing Firm. Please verify your email address by clicking the button below:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}" 
+                   style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Verify Email Address
+                </a>
+              </div>
+              <p>If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #666;">
+                ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}
+              </p>
+              <p>This link will expire in 24 hours.</p>
+              <p>Best regards,<br>The Marketing Firm Team</p>
+            </div>
+          `,
+          text: `Welcome to Marketing Firm! Please verify your email by visiting: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`
+        },
+        from: {
+          email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
+          name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+        },
+        userId: user._id
+      });
+    } catch (emailError) {
+      logger.error('Failed to send verification email:', emailError);
+      // Don't fail registration if email fails
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -73,7 +118,7 @@ router.post('/register', [
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User registered successfully. Please check your email to verify your account.',
       data: {
         user: {
           id: user._id,
@@ -168,6 +213,9 @@ router.post('/login', [
           id: user._id,
           name: user.name,
           email: user.email,
+          company: user.company,
+          location: user.location,
+          country: user.country,
           role: user.role,
           plan: user.plan,
           isEmailVerified: user.isEmailVerified,
@@ -209,6 +257,9 @@ router.get('/me', protect, async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
+          company: user.company,
+          location: user.location,
+          country: user.country,
           role: user.role,
           plan: user.plan,
           profilePicture: user.profilePicture,
@@ -392,7 +443,45 @@ router.post('/forgot-password', [
     user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
     await user.save();
 
-    // TODO: Send email with reset link
+    // Send password reset email
+    try {
+      await emailService.sendEmail({
+        to: user.email,
+        subject: 'Password Reset - Marketing Firm',
+        content: {
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Password Reset Request</h2>
+              <p>Hi ${user.name},</p>
+              <p>You requested to reset your password. Click the button below to reset your password:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}" 
+                   style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Reset Password
+                </a>
+              </div>
+              <p>If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #666;">
+                ${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}
+              </p>
+              <p>This link will expire in 1 hour.</p>
+              <p>If you didn't request this password reset, please ignore this email.</p>
+              <p>Best regards,<br>The Marketing Firm Team</p>
+            </div>
+          `,
+          text: `Password Reset Request. Please visit: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+        },
+        from: {
+          email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
+          name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+        },
+        userId: user._id
+      });
+    } catch (emailError) {
+      logger.error('Failed to send password reset email:', emailError);
+      // Don't fail the request if email fails
+    }
+
     logger.info(`Password reset requested for: ${email}`);
 
     res.json({
@@ -469,6 +558,132 @@ router.post('/reset-password', [
     }
 
     logger.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   POST /api/auth/verify-email
+// @desc    Verify email address
+// @access  Public
+router.post('/verify-email', [
+  body('token')
+    .notEmpty()
+    .withMessage('Verification token is required')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { token } = req.body;
+
+    // Find user with verification token
+    const user = await User.findOne({
+      emailVerificationToken: token
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification token'
+      });
+    }
+
+    // Update user as verified
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save();
+
+    logger.info(`Email verified for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    logger.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   POST /api/auth/resend-verification
+// @desc    Resend email verification
+// @access  Private
+router.post('/resend-verification', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    // Generate new verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    user.emailVerificationToken = emailVerificationToken;
+    await user.save();
+
+    // Send verification email
+    try {
+      await emailService.sendEmail({
+        to: user.email,
+        subject: 'Verify Your Email - Marketing Firm',
+        content: {
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Verify Your Email Address</h2>
+              <p>Hi ${user.name},</p>
+              <p>Please verify your email address by clicking the button below:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}" 
+                   style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Verify Email Address
+                </a>
+              </div>
+              <p>If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #666;">
+                ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}
+              </p>
+              <p>This link will expire in 24 hours.</p>
+              <p>Best regards,<br>The Marketing Firm Team</p>
+            </div>
+          `,
+          text: `Please verify your email by visiting: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`
+        },
+        from: {
+          email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
+          name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+        },
+        userId: user._id
+      });
+    } catch (emailError) {
+      logger.error('Failed to send verification email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification email sent successfully'
+    });
+  } catch (error) {
+    logger.error('Resend verification error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

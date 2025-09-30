@@ -1,20 +1,23 @@
 import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
+import Mailjet from 'node-mailjet';
 import logger from '../utils/logger.js';
 
 class EmailService {
   constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY || 're_ytiYvkY7_N6Q7W97ru3MgifUryQyAGfgZ');
+    this.mailjet = null;
     this.transporter = null;
     this.initializeTransporter();
   }
 
   async initializeTransporter() {
     try {
-      // Check if Resend is configured (primary email service)
-      if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_ytiYvkY7_N6Q7W97ru3MgifUryQyAGfgZ') {
-        logger.info('Email service initialized with Resend');
-        this.transporter = null; // Not needed when using Resend
+      // Check if Mailjet is configured (primary email service)
+      if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+        this.mailjet = new Mailjet({
+          apiKey: process.env.MAILJET_API_KEY,
+          apiSecret: process.env.MAILJET_SECRET_KEY
+        });
+        logger.info('Email service initialized with Mailjet');
         return;
       }
 
@@ -35,8 +38,8 @@ class EmailService {
         await this.transporter.verify();
         logger.info('Email service initialized with SMTP');
       } else {
-        // Neither Resend nor SMTP configured
-        logger.warn('Email service not configured - missing Resend API key or SMTP credentials');
+        // Neither Mailjet nor SMTP configured
+        logger.warn('Email service not configured - missing Mailjet API keys or SMTP credentials');
         this.transporter = null;
       }
     } catch (error) {
@@ -47,9 +50,9 @@ class EmailService {
 
   async sendEmail(email) {
     try {
-      // Try Resend first (preferred)
-      if (this.resend && process.env.RESEND_API_KEY) {
-        return await this.sendWithResend(email);
+      // Try Mailjet first (preferred)
+      if (this.mailjet && process.env.MAILJET_API_KEY) {
+        return await this.sendWithMailjet(email);
       }
 
       // Fallback to nodemailer
@@ -70,31 +73,46 @@ class EmailService {
     }
   }
 
-  async sendWithResend(email) {
+  async sendWithMailjet(email) {
     try {
-      if (!this.resend) {
-        throw new Error('Resend service not configured');
+      if (!this.mailjet) {
+        throw new Error('Mailjet service not configured');
       }
 
-      const result = await this.resend.emails.send({
-        from: `${email.from.name} <${email.from.email}>`,
-        to: [email.to],
-        subject: email.subject,
-        html: email.content.html,
-        text: email.content.text || this.stripHtml(email.content.html),
-        headers: {
-          'X-Email-ID': email._id.toString(),
-          'X-User-ID': email.userId.toString()
-        }
+      const request = this.mailjet.post('send', { version: 'v3.1' }).request({
+        Messages: [
+          {
+            From: {
+              Email: email.from.email,
+              Name: email.from.name
+            },
+            To: [
+              {
+                Email: email.to,
+                Name: email.to.split('@')[0] // Use email prefix as name
+              }
+            ],
+            Subject: email.subject,
+            TextPart: email.content.text || this.stripHtml(email.content.html),
+            HTMLPart: email.content.html,
+            CustomID: email._id ? email._id.toString() : `email_${Date.now()}`,
+            Headers: {
+              'X-Email-ID': email._id ? email._id.toString() : '',
+              'X-User-ID': email.userId ? email.userId.toString() : ''
+            }
+          }
+        ]
       });
 
-      logger.info(`Email sent via Resend: ${result.data?.id}`);
+      const result = await request;
+      
+      logger.info(`Email sent via Mailjet: ${result.body.Messages[0].To[0].MessageID}`);
       return {
-        messageId: result.data?.id,
-        provider: 'resend'
+        messageId: result.body.Messages[0].To[0].MessageID,
+        provider: 'mailjet'
       };
     } catch (error) {
-      logger.error('Resend email error:', error);
+      logger.error('Mailjet email error:', error);
       throw error;
     }
   }

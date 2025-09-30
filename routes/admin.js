@@ -6,6 +6,7 @@ import SMS from '../models/SMS.js';
 import ApiKey from '../models/ApiKey.js';
 import Quota from '../models/Quota.js';
 import { protect, requireAdmin } from '../middleware/auth.js';
+import emailService from '../services/emailService.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -733,6 +734,288 @@ router.get('/analytics', protect, requireAdmin, [
     });
   } catch (error) {
     logger.error('Get admin analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   POST /api/admin/send-email
+// @desc    Send email to users (admin only)
+// @access  Private/Admin
+router.post('/send-email', protect, requireAdmin, [
+  body('to')
+    .isArray({ min: 1 })
+    .withMessage('Recipients list is required'),
+  body('to.*')
+    .isEmail()
+    .withMessage('Each recipient must be a valid email'),
+  body('subject')
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Subject is required and must be less than 200 characters'),
+  body('content')
+    .isObject()
+    .withMessage('Content is required'),
+  body('content.html')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('HTML content is required'),
+  body('content.text')
+    .optional()
+    .trim()
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { to, subject, content, from } = req.body;
+
+    const results = [];
+    const fromEmail = from || {
+      email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
+      name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+    };
+
+    // Send emails to each recipient
+    for (const emailAddress of to) {
+      try {
+        const emailData = {
+          to: emailAddress,
+          subject,
+          content,
+          from: fromEmail,
+          userId: req.user.id, // Admin user ID
+          metadata: {
+            sentBy: 'admin',
+            adminId: req.user.id
+          }
+        };
+
+        const result = await emailService.sendEmail(emailData);
+        
+        // Save email record
+        const emailRecord = await Email.create({
+          userId: req.user.id,
+          to: emailAddress,
+          subject,
+          content,
+          from: fromEmail,
+          status: 'sent',
+          tracking: {
+            messageId: result.messageId,
+            provider: result.provider
+          },
+          metadata: {
+            sentBy: 'admin',
+            adminId: req.user.id
+          }
+        });
+
+        results.push({
+          email: emailAddress,
+          success: true,
+          messageId: result.messageId,
+          emailId: emailRecord._id
+        });
+
+        logger.info(`Admin email sent to: ${emailAddress}`);
+      } catch (error) {
+        logger.error(`Failed to send email to ${emailAddress}:`, error);
+        results.push({
+          email: emailAddress,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    res.json({
+      success: true,
+      message: `Email sending completed. ${successCount} sent, ${failureCount} failed.`,
+      data: {
+        results,
+        summary: {
+          total: to.length,
+          successful: successCount,
+          failed: failureCount
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Admin send email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   POST /api/admin/send-bulk-email
+// @desc    Send bulk email to all users (admin only)
+// @access  Private/Admin
+router.post('/send-bulk-email', protect, requireAdmin, [
+  body('subject')
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Subject is required and must be less than 200 characters'),
+  body('content')
+    .isObject()
+    .withMessage('Content is required'),
+  body('content.html')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('HTML content is required'),
+  body('content.text')
+    .optional()
+    .trim(),
+  body('userFilter')
+    .optional()
+    .isObject()
+    .withMessage('User filter must be an object')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { subject, content, from, userFilter = {} } = req.body;
+
+    // Build user query based on filter
+    const userQuery = {};
+    if (userFilter.plan) {
+      userQuery.plan = userFilter.plan;
+    }
+    if (userFilter.role) {
+      userQuery.role = userFilter.role;
+    }
+    if (userFilter.isActive !== undefined) {
+      userQuery.isActive = userFilter.isActive;
+    }
+
+    // Get users to send email to
+    const users = await User.find(userQuery).select('email name');
+    
+    if (users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No users found matching the criteria'
+      });
+    }
+
+    const fromEmail = from || {
+      email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
+      name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+    };
+
+    const results = [];
+    const batchSize = 10; // Process in batches to avoid overwhelming the email service
+
+    // Process users in batches
+    for (let i = 0; i < users.length; i += batchSize) {
+      const batch = users.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (user) => {
+        try {
+          const emailData = {
+            to: user.email,
+            subject: subject.replace('{{name}}', user.name),
+            content: {
+              html: content.html.replace(/\{\{name\}\}/g, user.name),
+              text: content.text ? content.text.replace(/\{\{name\}\}/g, user.name) : undefined
+            },
+            from: fromEmail,
+            userId: req.user.id,
+            metadata: {
+              sentBy: 'admin',
+              adminId: req.user.id,
+              bulkEmail: true
+            }
+          };
+
+          const result = await emailService.sendEmail(emailData);
+          
+          // Save email record
+          const emailRecord = await Email.create({
+            userId: req.user.id,
+            to: user.email,
+            subject: emailData.subject,
+            content: emailData.content,
+            from: fromEmail,
+            status: 'sent',
+            tracking: {
+              messageId: result.messageId,
+              provider: result.provider
+            },
+            metadata: {
+              sentBy: 'admin',
+              adminId: req.user.id,
+              bulkEmail: true,
+              recipientUserId: user._id
+            }
+          });
+
+          return {
+            email: user.email,
+            success: true,
+            messageId: result.messageId,
+            emailId: emailRecord._id
+          };
+        } catch (error) {
+          logger.error(`Failed to send bulk email to ${user.email}:`, error);
+          return {
+            email: user.email,
+            success: false,
+            error: error.message
+          };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+
+      // Add delay between batches
+      if (i + batchSize < users.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    logger.info(`Bulk email sent by admin ${req.user.id}: ${successCount} successful, ${failureCount} failed`);
+
+    res.json({
+      success: true,
+      message: `Bulk email sending completed. ${successCount} sent, ${failureCount} failed.`,
+      data: {
+        results,
+        summary: {
+          total: users.length,
+          successful: successCount,
+          failed: failureCount
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Admin bulk email error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
