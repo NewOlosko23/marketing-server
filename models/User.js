@@ -56,6 +56,21 @@ const userSchema = new mongoose.Schema({
     default: 0
   },
   lockUntil: Date,
+  company: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Company name cannot exceed 100 characters']
+  },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Location cannot exceed 100 characters']
+  },
+  country: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Country name cannot exceed 50 characters']
+  },
   preferences: {
     timezone: {
       type: String,

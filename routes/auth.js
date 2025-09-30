@@ -42,7 +42,7 @@ router.post('/register', [
       });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, password, company, location, country } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -57,7 +57,10 @@ router.post('/register', [
     const user = await User.create({
       name,
       email,
-      password
+      password,
+      company,
+      location,
+      country
     });
 
     // Create quota for user
@@ -76,6 +79,9 @@ router.post('/register', [
           id: user._id,
           name: user.name,
           email: user.email,
+          company: user.company,
+          location: user.location,
+          country: user.country,
           role: user.role,
           plan: user.plan,
           isEmailVerified: user.isEmailVerified
