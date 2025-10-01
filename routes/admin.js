@@ -781,8 +781,8 @@ router.post('/send-email', protect, requireAdmin, [
 
     const results = [];
     const fromEmail = from || {
-      email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
-      name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+      email: 'oloogeorge633@gmail.com', // Hardcoded email
+      name: 'Marketing Farm' // Hardcoded name
     };
 
     // Send emails to each recipient
@@ -921,8 +921,8 @@ router.post('/send-bulk-email', protect, requireAdmin, [
     }
 
     const fromEmail = from || {
-      email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
-      name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+      email: 'oloogeorge633@gmail.com', // Hardcoded email
+      name: 'Marketing Farm' // Hardcoded name
     };
 
     const results = [];

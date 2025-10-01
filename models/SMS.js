@@ -21,7 +21,7 @@ const smsSchema = new mongoose.Schema({
   from: {
     type: String,
     required: true,
-    default: process.env.TWILIO_PHONE_NUMBER || '+1234567890'
+    default: '+1234567890' // Hardcoded Twilio phone number
   },
   status: {
     type: String,

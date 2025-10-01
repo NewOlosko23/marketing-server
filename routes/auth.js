@@ -12,8 +12,8 @@ const router = express.Router();
 
 // Generate JWT token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
+  return jwt.sign({ id }, 'dsfb66YUGyugYi', {
+    expiresIn: '7d' // Hardcoded JWT expire time
   });
 };
 
@@ -85,24 +85,24 @@ router.post('/register', [
               <p>Hi ${user.name},</p>
               <p>Thank you for registering with Marketing Firm. Please verify your email address by clicking the button below:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}" 
+                <a href="http://localhost:3001/verify-email?token=${emailVerificationToken}" // Hardcoded frontend URL 
                    style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Verify Email Address
                 </a>
               </div>
               <p>If the button doesn't work, copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #666;">
-                ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}
+                http://localhost:3001/verify-email?token=${emailVerificationToken} // Hardcoded frontend URL
               </p>
               <p>This link will expire in 24 hours.</p>
               <p>Best regards,<br>The Marketing Firm Team</p>
             </div>
           `,
-          text: `Welcome to Marketing Firm! Please verify your email by visiting: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`
+          text: `Welcome to Marketing Firm! Please verify your email by visiting: http://localhost:3001/verify-email?token=${emailVerificationToken}` // Hardcoded frontend URL
         },
         from: {
-          email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
-          name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+          email: 'oloogeorge633@gmail.com', // Hardcoded email
+          name: 'Marketing Farm' // Hardcoded name
         },
         userId: user._id
       });
@@ -288,6 +288,26 @@ router.put('/me', protect, [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Name must be between 2 and 50 characters'),
+  body('email')
+    .optional()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('company')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Company name must be less than 100 characters'),
+  body('location')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Location must be less than 100 characters'),
+  body('country')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Country must be less than 100 characters'),
   body('preferences.timezone')
     .optional()
     .isString()
@@ -308,10 +328,26 @@ router.put('/me', protect, [
       });
     }
 
-    const { name, preferences } = req.body;
+    const { name, email, company, location, country, preferences } = req.body;
     const updateData = {};
 
+    // Check if email is being changed and if it's already in use
+    if (email && email !== req.user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists'
+        });
+      }
+      updateData.email = email;
+      updateData.isEmailVerified = false; // Reset verification if email changes
+    }
+
     if (name) updateData.name = name;
+    if (company !== undefined) updateData.company = company;
+    if (location !== undefined) updateData.location = location;
+    if (country !== undefined) updateData.country = country;
     if (preferences) {
       updateData.preferences = { ...req.user.preferences, ...preferences };
     }
@@ -322,6 +358,8 @@ router.put('/me', protect, [
       { new: true, runValidators: true }
     );
 
+    logger.info(`Profile updated for user: ${user.email}`);
+
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -330,9 +368,13 @@ router.put('/me', protect, [
           id: user._id,
           name: user.name,
           email: user.email,
+          company: user.company,
+          location: user.location,
+          country: user.country,
           role: user.role,
           plan: user.plan,
           profilePicture: user.profilePicture,
+          isEmailVerified: user.isEmailVerified,
           preferences: user.preferences
         }
       }
@@ -435,7 +477,7 @@ router.post('/forgot-password', [
     // Generate reset token (in a real app, you'd send this via email)
     const resetToken = jwt.sign(
       { id: user._id },
-      process.env.JWT_SECRET,
+      'dsfb66YUGyugYi', // Hardcoded JWT secret
       { expiresIn: '1h' }
     );
 
@@ -455,25 +497,25 @@ router.post('/forgot-password', [
               <p>Hi ${user.name},</p>
               <p>You requested to reset your password. Click the button below to reset your password:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}" 
+                <a href="http://localhost:3001/reset-password?token=${resetToken}" // Hardcoded frontend URL 
                    style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Reset Password
                 </a>
               </div>
               <p>If the button doesn't work, copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #666;">
-                ${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}
+                http://localhost:3001/reset-password?token=${resetToken} // Hardcoded frontend URL
               </p>
               <p>This link will expire in 1 hour.</p>
               <p>If you didn't request this password reset, please ignore this email.</p>
               <p>Best regards,<br>The Marketing Firm Team</p>
             </div>
           `,
-          text: `Password Reset Request. Please visit: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+          text: `Password Reset Request. Please visit: http://localhost:3001/reset-password?token=${resetToken}` // Hardcoded frontend URL
         },
         from: {
-          email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
-          name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+          email: 'oloogeorge633@gmail.com', // Hardcoded email
+          name: 'Marketing Farm' // Hardcoded name
         },
         userId: user._id
       });
@@ -522,7 +564,7 @@ router.post('/reset-password', [
     const { token, password } = req.body;
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, 'dsfb66YUGyugYi'); // Hardcoded JWT secret
     
     const user = await User.findOne({
       _id: decoded.id,
@@ -649,24 +691,24 @@ router.post('/resend-verification', protect, async (req, res) => {
               <p>Hi ${user.name},</p>
               <p>Please verify your email address by clicking the button below:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}" 
+                <a href="http://localhost:3001/verify-email?token=${emailVerificationToken}" // Hardcoded frontend URL 
                    style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Verify Email Address
                 </a>
               </div>
               <p>If the button doesn't work, copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #666;">
-                ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}
+                http://localhost:3001/verify-email?token=${emailVerificationToken} // Hardcoded frontend URL
               </p>
               <p>This link will expire in 24 hours.</p>
               <p>Best regards,<br>The Marketing Firm Team</p>
             </div>
           `,
-          text: `Please verify your email by visiting: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`
+          text: `Please verify your email by visiting: http://localhost:3001/verify-email?token=${emailVerificationToken}` // Hardcoded frontend URL
         },
         from: {
-          email: process.env.MAILJET_FROM_EMAIL || 'noreply@marketingfirm.com',
-          name: process.env.MAILJET_FROM_NAME || 'Marketing Firm'
+          email: 'oloogeorge633@gmail.com', // Hardcoded email
+          name: 'Marketing Farm' // Hardcoded name
         },
         userId: user._id
       });

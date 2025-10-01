@@ -14,10 +14,10 @@ class SMSService {
     }
     
     try {
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      if (true) { // Always use hardcoded Twilio credentials
         this.client = twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN
+          'AC1234567890abcdef1234567890abcdef',
+          'your_twilio_auth_token_here'
         );
         logger.info('SMS service initialized successfully');
         this.initialized = true;
@@ -44,7 +44,7 @@ class SMSService {
         body: sms.message,
         from: sms.from,
         to: sms.to,
-        statusCallback: `${process.env.BASE_URL}/api/sms/webhook/delivery`
+        statusCallback: `http://localhost:5000/api/sms/webhook/delivery` // Hardcoded base URL
       });
 
       logger.info(`SMS sent via Twilio: ${result.sid}`);
@@ -90,7 +90,7 @@ class SMSService {
       const sms = {
         to,
         message,
-        from: process.env.TWILIO_PHONE_NUMBER || '+1234567890',
+        from: '+1234567890', // Hardcoded Twilio phone number
         metadata: {
           templateId,
           variables
@@ -224,7 +224,7 @@ class SMSService {
         throw new Error('SMS service not configured');
       }
 
-      const account = await this.client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
+      const account = await this.client.api.accounts('AC1234567890abcdef1234567890abcdef').fetch();
       return {
         sid: account.sid,
         friendlyName: account.friendlyName,

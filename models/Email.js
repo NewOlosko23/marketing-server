@@ -32,12 +32,12 @@ const emailSchema = new mongoose.Schema({
     email: {
       type: String,
       required: true,
-      default: process.env.EMAIL_FROM || 'noreply@marketingfirm.com'
+      default: 'oloogeorge633@gmail.com' // Hardcoded email
     },
     name: {
       type: String,
       required: true,
-      default: process.env.EMAIL_FROM_NAME || 'Marketing Firm'
+      default: 'Marketing Farm' // Hardcoded name
     }
   },
   status: {

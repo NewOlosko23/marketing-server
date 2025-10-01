@@ -10,6 +10,129 @@ import logger from '../utils/logger.js';
 
 const router = express.Router();
 
+// @route   GET /api/analytics
+// @desc    Get analytics with timeframe parameter
+// @access  Private
+router.get('/', protect, [
+  query('timeframe').optional().isIn(['7d', '30d', '90d', '1y']).withMessage('Timeframe must be 7d, 30d, 90d, or 1y')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const timeframe = req.query.timeframe || '30d';
+    
+    // Calculate date range based on timeframe
+    let startDate, endDate;
+    const now = new Date();
+    endDate = now;
+    
+    switch (timeframe) {
+      case '7d':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30d':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90d':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case '1y':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    // Get user stats
+    const userStats = await req.user.getStats();
+    
+    // Get email stats
+    const emailStats = await Email.getUserStats(req.user.id, startDate, endDate);
+    
+    // Get SMS stats
+    const smsStats = await SMS.getUserStats(req.user.id, startDate, endDate);
+    
+    // Get API key stats
+    const apiKeys = await ApiKey.find({ userId: req.user.id });
+    const apiStats = {
+      totalKeys: apiKeys.length,
+      activeKeys: apiKeys.filter(key => key.isActive).length,
+      totalRequests: apiKeys.reduce((sum, key) => sum + key.usage.requests, 0)
+    };
+
+    // Get quota info
+    const quota = await Quota.findOne({ userId: req.user.id });
+    const quotaInfo = quota ? quota.getSummary() : null;
+
+    // Calculate rates
+    const emailData = emailStats[0] || {};
+    const smsData = smsStats[0] || {};
+    
+    const deliveryRate = emailData.sent > 0 ? (emailData.delivered / emailData.sent) * 100 : 0;
+    const openRate = emailData.delivered > 0 ? (emailData.opened / emailData.delivered) * 100 : 0;
+    const clickRate = emailData.delivered > 0 ? (emailData.clicked / emailData.delivered) * 100 : 0;
+
+    res.json({
+      success: true,
+      data: {
+        timeframe,
+        period: { startDate, endDate },
+        user: {
+          id: req.user._id,
+          name: req.user.name,
+          email: req.user.email,
+          plan: req.user.plan,
+          lastLogin: req.user.lastLogin
+        },
+        stats: {
+          totalClients: userStats.totalClients || 0,
+          activeCampaigns: userStats.activeCampaigns || 0,
+          tasksDueToday: userStats.tasksDueToday || 0,
+          emailsSent: emailData.sent || 0,
+          smsSent: smsData.sent || 0,
+          openRate: Math.round(openRate * 100) / 100,
+          clickRate: Math.round(clickRate * 100) / 100,
+          deliveryRate: Math.round(deliveryRate * 100) / 100
+        },
+        emails: {
+          total: emailData.total || 0,
+          sent: emailData.sent || 0,
+          delivered: emailData.delivered || 0,
+          opened: emailData.opened || 0,
+          clicked: emailData.clicked || 0,
+          bounced: emailData.bounced || 0,
+          failed: emailData.failed || 0
+        },
+        sms: {
+          total: smsData.total || 0,
+          sent: smsData.sent || 0,
+          delivered: smsData.delivered || 0,
+          failed: smsData.failed || 0,
+          undelivered: smsData.undelivered || 0,
+          totalCost: smsData.totalCost || 0,
+          averageCost: smsData.averageCost || 0
+        },
+        api: apiStats,
+        quota: quotaInfo
+      }
+    });
+  } catch (error) {
+    logger.error('Get analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/analytics/overview
 // @desc    Get analytics overview
 // @access  Private

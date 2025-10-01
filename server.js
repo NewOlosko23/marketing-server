@@ -6,8 +6,7 @@ import compression from "compression";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import "express-async-errors";
-import dotenv from "dotenv";
-dotenv.config();
+// Environment variables are now hardcoded
 
 const app = express();
 
@@ -20,6 +19,7 @@ import emailRoutes from "./routes/emails.js";
 import smsRoutes from "./routes/sms.js";
 import analyticsRoutes from "./routes/analytics.js";
 import adminRoutes from "./routes/admin.js";
+import uploadRoutes from "./routes/upload.js";
 
 // Import middleware
 import errorHandler from "./middleware/errorHandler.js";
@@ -42,7 +42,7 @@ app.use(limiter);
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3001",
+    origin: "http://localhost:3001", // Hardcoded frontend URL
     credentials: true,
   })
 );
@@ -64,7 +64,7 @@ app.get("/health", (req, res) => {
     status: "OK",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || "development",
+    environment: "development", // Hardcoded environment
   });
 });
 
@@ -77,6 +77,7 @@ app.use("/api/emails", emailRoutes);
 app.use("/api/sms", smsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
@@ -123,11 +124,11 @@ process.on("SIGINT", () => {
   });
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = 5000; // Hardcoded port
 
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
-  logger.info(`Environment: ${process.env.NODE_ENV || "development"}`);
+  logger.info(`Environment: development`); // Hardcoded environment
 });
 
 export default app;

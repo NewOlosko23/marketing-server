@@ -12,25 +12,25 @@ class EmailService {
   async initializeTransporter() {
     try {
       // Check if Mailjet is configured (primary email service)
-      if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+      if (true) { // Always use hardcoded Mailjet keys
         this.mailjet = new Mailjet({
-          apiKey: process.env.MAILJET_API_KEY,
-          apiSecret: process.env.MAILJET_SECRET_KEY
+          apiKey: '77f88844f6df9fce5cb22b9e26e99208',
+          apiSecret: '8305269ebd5a9d920e7cc128a7e86b62'
         });
         logger.info('Email service initialized with Mailjet');
         return;
       }
 
-      // Check if SMTP is configured (fallback)
-      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      // Check if SMTP is configured (fallback) - disabled for hardcoded setup
+      if (false) { // SMTP fallback disabled
         // Configure nodemailer transporter (fallback)
         this.transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST || 'smtp.gmail.com',
-          port: process.env.SMTP_PORT || 587,
+          host: 'smtp.gmail.com',
+          port: 587,
           secure: false,
           auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
+            user: 'hardcoded_user',
+            pass: 'hardcoded_pass'
           }
         });
 
@@ -51,7 +51,7 @@ class EmailService {
   async sendEmail(email) {
     try {
       // Try Mailjet first (preferred)
-      if (this.mailjet && process.env.MAILJET_API_KEY) {
+      if (this.mailjet) {
         return await this.sendWithMailjet(email);
       }
 
@@ -178,8 +178,8 @@ class EmailService {
         subject,
         content: { html, text },
         from: {
-          email: process.env.EMAIL_FROM || 'noreply@marketingfirm.com',
-          name: process.env.EMAIL_FROM_NAME || 'Marketing Firm'
+          email: 'oloogeorge633@gmail.com', // Hardcoded email
+          name: 'Marketing Farm' // Hardcoded name
         },
         metadata: {
           templateId,

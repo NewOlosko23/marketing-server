@@ -2,13 +2,12 @@ import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Quota from '../models/Quota.js';
 import ApiKey from '../models/ApiKey.js';
-import dotenv from 'dotenv';
-dotenv.config();
+// Environment variables are now hardcoded
 
 const seedData = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect('mongodb+srv://oloogeorge633_db_user:oloogeorge633_db_user@cluster0.rgrun31.mongodb.net/marketing_firm?retryWrites=true&w=majority&appName=Cluster0'); // Hardcoded MongoDB URI
     console.log('Connected to MongoDB');
 
     // Clear existing data

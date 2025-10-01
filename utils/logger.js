@@ -22,7 +22,7 @@ if (!fs.existsSync(logsDir)) {
 
 // Create logger instance
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: 'info', // Hardcoded log level
   format: logFormat,
   defaultMeta: { service: 'marketing-firm-api' },
   transports: [

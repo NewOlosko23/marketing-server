@@ -33,6 +33,51 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/quotas/user/:userId
+// @desc    Get specific user's quota information
+// @access  Private
+router.get('/user/:userId', protect, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Check if user is requesting their own quota or is admin
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    let quota = await Quota.findOne({ userId });
+    
+    // Create quota if doesn't exist
+    if (!quota) {
+      const { default: User } = await import('../models/User.js');
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      quota = await Quota.createForUser(userId, user.plan);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        quota: quota.getSummary()
+      }
+    });
+  } catch (error) {
+    logger.error('Get user quota error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/quotas/usage
 // @desc    Get detailed usage information
 // @access  Private

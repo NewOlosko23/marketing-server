@@ -20,7 +20,7 @@ const protect = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, 'dsfb66YUGyugYi');
     
     // Get user from token
     const user = await User.findById(decoded.id).select('-password');
@@ -171,7 +171,7 @@ const optionalAuth = async (req, res, next) => {
     }
 
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, 'dsfb66YUGyugYi');
       const user = await User.findById(decoded.id).select('-password');
       
       if (user && user.isActive) {
