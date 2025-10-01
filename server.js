@@ -5,10 +5,18 @@ import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import fs from "fs";
 import "express-async-errors";
 // Environment variables are now hardcoded
 
 const app = express();
+
+// Ensure uploads directory exists
+const uploadsDir = 'uploads';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('✅ Created uploads directory');
+}
 
 // Import routes
 import authRoutes from "./routes/auth.js";

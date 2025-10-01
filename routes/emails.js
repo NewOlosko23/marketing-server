@@ -121,6 +121,128 @@ router.post('/send', protect, [
   }
 });
 
+// @route   POST /api/emails
+// @desc    Create email campaign
+// @access  Private
+router.post('/', protect, [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Campaign name is required and must be less than 100 characters'),
+  body('subject')
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Subject is required and must be less than 200 characters'),
+  body('content.html')
+    .notEmpty()
+    .withMessage('HTML content is required'),
+  body('content.text')
+    .optional()
+    .isString()
+    .withMessage('Text content must be a string'),
+  body('recipients')
+    .isArray({ min: 1 })
+    .withMessage('At least one recipient is required'),
+  body('recipients.*')
+    .isEmail()
+    .withMessage('Each recipient must be a valid email address'),
+  body('scheduledAt')
+    .optional()
+    .isISO8601()
+    .withMessage('Scheduled date must be a valid ISO 8601 date')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { name, subject, content, recipients, scheduledAt, metadata } = req.body;
+
+    // Check quota
+    const quota = await Quota.findOne({ userId: req.user.id });
+    if (!quota) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quota not found'
+      });
+    }
+
+    if (!quota.hasQuotaAvailable('email', recipients.length)) {
+      return res.status(429).json({
+        success: false,
+        message: 'Email quota exceeded'
+      });
+    }
+
+    // Create campaign (for now, we'll create individual emails)
+    const campaign = {
+      name,
+      subject,
+      content,
+      recipients,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
+      metadata: metadata || {},
+      userId: req.user.id,
+      status: 'draft'
+    };
+
+    // Create individual email records
+    const emailPromises = recipients.map(recipient => 
+      Email.create({
+        userId: req.user.id,
+        to: recipient,
+        subject,
+        content,
+        scheduledAt: campaign.scheduledAt,
+        metadata: {
+          campaignName: name,
+          ...campaign.metadata
+        }
+      })
+    );
+
+    const emails = await Promise.all(emailPromises);
+
+    // Consume quota
+    await quota.consumeQuota('email', recipients.length);
+
+    logger.info(`Email campaign created: ${name} by user: ${req.user.email}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Email campaign created successfully',
+      data: {
+        campaign: {
+          id: campaign.name + '_' + Date.now(), // Simple ID for now
+          name: campaign.name,
+          subject: campaign.subject,
+          recipients: recipients.length,
+          status: campaign.status,
+          scheduledAt: campaign.scheduledAt,
+          createdAt: new Date()
+        },
+        emails: emails.map(email => ({
+          id: email._id,
+          to: email.to,
+          status: email.status
+        }))
+      }
+    });
+  } catch (error) {
+    logger.error('Create email campaign error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/emails
 // @desc    Get user's emails
 // @access  Private

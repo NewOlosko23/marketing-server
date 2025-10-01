@@ -1,15 +1,27 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { protect } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
 
+// Ensure uploads directory exists
+const uploadsDir = 'uploads';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  logger.info('Created uploads directory');
+}
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    // Ensure directory exists before saving file
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    cb(null, uploadsDir + '/');
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -61,9 +73,13 @@ router.post('/', protect, upload.single('file'), async (req, res) => {
     let duplicates = 0;
 
     try {
+      // Check if file exists before processing
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+
       if (fileName.endsWith('.csv')) {
         // Parse CSV file
-        const fs = await import('fs');
         const csv = await import('csv-parser');
         
         const results = [];

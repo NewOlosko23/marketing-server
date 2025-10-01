@@ -1,0 +1,87 @@
+{"level":"error","message":"Email service initialization failed: nodemailer.createTransporter is not a function","service":"marketing-firm-api","stack":"TypeError: nodemailer.createTransporter is not a function\n    at EmailService.initializeTransporter (C:\\Users\\Olosko\\Desktop\\Projects\\data\\law\\backend\\services\\emailService.js:15:37)\n    at new EmailService (C:\\Users\\Olosko\\Desktop\\Projects\\data\\law\\backend\\services\\emailService.js:9:10)\n    at Object.<anonymous> (C:\\Users\\Olosko\\Desktop\\Projects\\data\\law\\backend\\services\\emailService.js:270:18)\n    at Module._compile (node:internal/modules/cjs/loader:1706:14)\n    at Object..js (node:internal/modules/cjs/loader:1839:10)\n    at Module.load (node:internal/modules/cjs/loader:1441:32)\n    at Function._load (node:internal/modules/cjs/loader:1263:12)\n    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)\n    at Module.require (node:internal/modules/cjs/loader:1463:12)","timestamp":"2025-09-30 13:41:12"}
+{"level":"warn","message":"SMS service not configured - missing Twilio credentials","service":"marketing-firm-api","timestamp":"2025-09-30 13:41:13"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 13:41:13"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 13:41:13"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 13:41:20"}
+{"level":"warn","message":"SMS service not configured - missing Twilio credentials","service":"marketing-firm-api","timestamp":"2025-09-30 13:50:23"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 13:50:23"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 13:50:23"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 13:50:28"}
+{"code":"EAUTH","command":"API","level":"error","message":"Email service initialization failed: Missing credentials for \"PLAIN\"","service":"marketing-firm-api","stack":"Error: Missing credentials for \"PLAIN\"\n    at SMTPConnection._formatError (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:809:19)\n    at SMTPConnection.login (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:454:38)\n    at C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-transport\\index.js:375:32\n    at SMTPConnection.<anonymous> (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:215:17)\n    at Object.onceWrapper (node:events:633:28)\n    at SMTPConnection.emit (node:events:519:28)\n    at SMTPConnection._actionEHLO (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:1371:14)\n    at SMTPConnection._processResponse (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:993:20)\n    at SMTPConnection._onData (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:774:14)\n    at SMTPConnection._onSocketData (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\nodemailer\\lib\\smtp-connection\\index.js:195:44)","timestamp":"2025-09-30 13:50:29"}
+{"level":"warn","message":"Email service not configured - missing SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 13:55:37"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 13:55:40"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 13:55:40"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 13:55:44"}
+{"level":"info","message":"::1 - - [30/Sep/2025:10:55:55 +0000] \"GET /health HTTP/1.1\" 200 102 \"-\" \"Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.22000.2538\"","service":"marketing-firm-api","timestamp":"2025-09-30 13:55:55"}
+{"level":"warn","message":"Email service not configured - missing SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 14:03:03"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 14:03:04"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 14:03:04"}
+{"level":"error","message":"MongoDB connection error: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017","reason":{"commonWireVersion":0,"compatible":true,"heartbeatFrequencyMS":10000,"localThresholdMS":15,"logicalSessionTimeoutMinutes":null,"maxElectionId":null,"maxSetVersion":null,"servers":{},"setName":null,"stale":false,"type":"Unknown"},"service":"marketing-firm-api","stack":"MongooseServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017\n    at _handleConnectionErrors (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\mongoose\\lib\\connection.js:816:11)\n    at NativeConnection.openUri (C:\\Users\\Olosko\\desktop\\projects\\data\\law\\backend\\node_modules\\mongoose\\lib\\connection.js:791:11)","timestamp":"2025-09-30 14:03:34"}
+{"level":"warn","message":"Email service not configured - missing SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 14:03:55"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 14:03:56"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 14:03:56"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 14:04:00"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 14:05:05"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 14:05:06"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 14:05:06"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 14:05:11"}
+{"level":"info","message":"Email service initialized with Resend","service":"marketing-firm-api","timestamp":"2025-09-30 14:06:14"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 14:06:14"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 14:06:14"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 14:06:17"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 14:57:31"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 14:57:36"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 14:57:36"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 14:57:40"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:25"}
+{"level":"info","message":"Server running on port 4000","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:26"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:26"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:30"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:51"}
+{"level":"info","message":"Server running on port 4000","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:52"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:52"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 16:30:54"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:38"}
+{"level":"info","message":"Server running on port 4000","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:38"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:38"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:49"}
+{"level":"info","message":"Server running on port 4000","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:50"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:50"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 16:35:52"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-09-30 16:37:19"}
+{"level":"warn","message":"Email service not configured - missing Resend API key or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 16:40:28"}
+{"level":"info","message":"Server running on port 4000","service":"marketing-firm-api","timestamp":"2025-09-30 16:40:29"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 16:40:29"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 16:40:33"}
+{"level":"info","message":"::1 - - [30/Sep/2025:13:42:09 +0000] \"GET /health HTTP/1.1\" 200 103 \"-\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36\"","service":"marketing-firm-api","timestamp":"2025-09-30 16:42:09"}
+{"level":"info","message":"::1 - - [30/Sep/2025:13:42:10 +0000] \"GET /favicon.ico HTTP/1.1\" 404 45 \"-\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36\"","service":"marketing-firm-api","timestamp":"2025-09-30 16:42:10"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-09-30 16:45:42"}
+{"level":"warn","message":"Email service not configured - missing Mailjet API keys or SMTP credentials","service":"marketing-firm-api","timestamp":"2025-09-30 18:14:37"}
+{"level":"info","message":"Server running on port 4000","service":"marketing-firm-api","timestamp":"2025-09-30 18:14:37"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 18:14:37"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 18:14:40"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-09-30 18:14:49"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:03"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:04"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:04"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:07"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:10"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:27"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:27"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:27"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:30"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-09-30 18:59:55"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-10-01 14:37:20"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-10-01 14:47:45"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-10-01 14:47:49"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-10-01 14:47:49"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-10-01 14:47:58"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-10-01 14:48:03"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-10-01 15:00:57"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-10-01 15:02:22"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-10-01 15:04:59"}
+{"level":"info","message":"Email service initialized with Mailjet","service":"marketing-firm-api","timestamp":"2025-10-01 15:09:33"}
+{"level":"info","message":"Server running on port 5000","service":"marketing-firm-api","timestamp":"2025-10-01 15:09:34"}
+{"level":"info","message":"Environment: development","service":"marketing-firm-api","timestamp":"2025-10-01 15:09:34"}
+{"level":"info","message":"Connected to MongoDB","service":"marketing-firm-api","timestamp":"2025-10-01 15:09:38"}
+{"level":"info","message":"SIGINT received, shutting down gracefully","service":"marketing-firm-api","timestamp":"2025-10-01 15:13:41"}
