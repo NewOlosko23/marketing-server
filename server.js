@@ -42,7 +42,11 @@ app.use(limiter);
 // CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:3001", // Hardcoded frontend URL
+    origin: [
+      "http://localhost:3000", // Frontend URL
+      "http://localhost:3001", // Alternative frontend URL
+      "https://your-production-domain.com" // Add your production domain here
+    ],
     credentials: true,
   })
 );
