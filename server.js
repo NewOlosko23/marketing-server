@@ -28,6 +28,10 @@ import smsRoutes from "./routes/sms.js";
 import analyticsRoutes from "./routes/analytics.js";
 import adminRoutes from "./routes/admin.js";
 import uploadRoutes from "./routes/upload.js";
+import campaignRoutes from "./routes/campaigns.js";
+import templateRoutes from "./routes/templates.js";
+import contactGroupRoutes from "./routes/contact-groups.js";
+import contactRoutes from "./routes/contacts.js";
 
 // Import middleware
 import errorHandler from "./middleware/errorHandler.js";
@@ -51,9 +55,10 @@ app.use(limiter);
 app.use(
   cors({
     origin: [
-      "http://localhost:3000", // Frontend URL
-      "http://localhost:3001", // Alternative frontend URL
-      "https://your-production-domain.com" // Add your production domain here
+      "http://localhost:5173", // Development frontend URL (Vite default)
+      "http://localhost:3000", // Alternative development URL
+      "http://localhost:3001", // Alternative development URL
+      "https://marketing-build.onrender.com" // Production frontend URL
     ],
     credentials: true,
   })
@@ -90,6 +95,10 @@ app.use("/api/sms", smsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/templates", templateRoutes);
+app.use("/api/contact-groups", contactGroupRoutes);
+app.use("/api/contacts", contactRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

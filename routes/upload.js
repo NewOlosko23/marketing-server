@@ -1,8 +1,9 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
+import XLSX from 'xlsx';
 import { protect } from '../middleware/auth.js';
+import Contact from '../models/Contact.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -14,176 +15,330 @@ if (!fs.existsSync(uploadsDir)) {
   logger.info('Created uploads directory');
 }
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Ensure directory exists before saving file
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    cb(null, uploadsDir + '/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage: storage,
+// Configure multer for file uploads - simple approach
+const upload = multer({ 
+  dest: uploadsDir + '/',
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv', // .csv
+      'application/pdf' // .pdf
     ];
     
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only Excel and CSV files are allowed.'), false);
+      cb(new Error('Invalid file type. Only Excel (.xlsx, .xls), CSV, and PDF files are allowed.'), false);
     }
   }
 });
 
+// Helper: extract contacts from raw text (for PDF support)
+const extractContactsFromText = (text) => {
+  // Extract emails with better regex
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const emails = text.match(emailRegex) || [];
+  
+  // Extract phone numbers with better regex
+  const phoneRegex = /(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/g;
+  const phones = text.match(phoneRegex) || [];
+  
+  // Extract names (basic pattern - first word, space, last word)
+  const nameRegex = /\b[A-Z][a-z]+ [A-Z][a-z]+\b/g;
+  const names = text.match(nameRegex) || [];
+  
+  // Extract websites
+  const websiteRegex = /(https?:\/\/)?(www\.)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const websites = text.match(websiteRegex) || [];
+  
+  // Extract locations (common patterns)
+  const locationRegex = /\b[A-Z][a-z]+(?: [A-Z][a-z]+)*(?:,\s*[A-Z]{2})?\b/g;
+  const locations = text.match(locationRegex) || [];
+  
+  // Remove duplicates
+  const uniqueEmails = [...new Set(emails)];
+  const uniquePhones = [...new Set(phones)];
+  const uniqueNames = [...new Set(names)];
+  const uniqueWebsites = [...new Set(websites)];
+  const uniqueLocations = [...new Set(locations)];
+  
+  return { 
+    emails: uniqueEmails, 
+    phones: uniquePhones, 
+    names: uniqueNames,
+    websites: uniqueWebsites,
+    locations: uniqueLocations,
+    totalContacts: Math.max(uniqueEmails.length, uniqueNames.length)
+  };
+};
+
 // @route   POST /api/upload
-// @desc    Upload and process Excel/CSV files
+// @desc    Upload and parse Excel or PDF files
 // @access  Private
 router.post('/', protect, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No file uploaded'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded' 
       });
     }
 
-    const { type = 'contacts' } = req.body;
     const filePath = req.file.path;
     const fileName = req.file.originalname;
+    const ext = fileName.split('.').pop().toLowerCase();
 
     logger.info(`File upload: ${fileName} by user ${req.user.id}`);
 
-    // Parse the uploaded file based on type
-    let parsedData = [];
-    let errors = [];
-    let duplicates = 0;
+    let data = [];
 
     try {
-      // Check if file exists before processing
-      if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found: ${filePath}`);
-      }
-
-      if (fileName.endsWith('.csv')) {
-        // Parse CSV file
-        const csv = await import('csv-parser');
+      if (ext === 'xlsx' || ext === 'xls') {
+        // Parse Excel
+        logger.info('Parsing Excel file');
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        data = XLSX.utils.sheet_to_json(sheet);
+        logger.info(`Excel parsing completed. ${data.length} rows parsed`);
         
+      } else if (ext === 'csv') {
+        // Parse CSV
+        logger.info('Parsing CSV file');
+        const csv = await import('csv-parser');
         const results = [];
+        
         await new Promise((resolve, reject) => {
           fs.createReadStream(filePath)
             .pipe(csv.default())
-            .on('data', (data) => results.push(data))
-            .on('end', resolve)
+            .on('data', (row) => results.push(row))
+            .on('end', () => resolve())
             .on('error', reject);
         });
         
-        parsedData = results;
-      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        // Parse Excel file
-        const XLSX = await import('xlsx');
-        const workbook = XLSX.readFile(filePath);
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        data = results;
+        logger.info(`CSV parsing completed. ${data.length} rows parsed`);
         
-        parsedData = jsonData;
+      } else if (ext === 'pdf') {
+        // Parse PDF
+        logger.info('Parsing PDF file');
+        try {
+          const pdfParse = await import('pdf-parse');
+          const buffer = fs.readFileSync(filePath);
+          const parsed = await pdfParse.default(buffer);
+          
+          // Extract contacts from PDF text
+          const extractedData = extractContactsFromText(parsed.text);
+          
+          // Create contact objects from extracted data
+          const contacts = [];
+          const maxLength = Math.max(
+            extractedData.emails.length,
+            extractedData.names.length,
+            extractedData.phones.length
+          );
+          
+          for (let i = 0; i < maxLength; i++) {
+            const contact = {
+              name: extractedData.names[i] || `Contact ${i + 1}`,
+              email: extractedData.emails[i] || '',
+              phone: extractedData.phones[i] || '',
+              website: extractedData.websites[i] || '',
+              location: extractedData.locations[i] || '',
+              source: 'pdf_import'
+            };
+            
+            // Only add contacts that have at least name or email
+            if (contact.name && contact.email) {
+              contacts.push(contact);
+            }
+          }
+          
+          data = contacts;
+          logger.info(`PDF parsing completed. Created ${contacts.length} contact objects from extracted data`);
+        } catch (pdfError) {
+          logger.error('PDF parsing error:', pdfError.message);
+          throw new Error(`Failed to parse PDF file: ${pdfError.message}`);
+        }
+        
+      } else {
+        // Clean up unsupported file
+        fs.unlinkSync(filePath);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Unsupported file type. Please use Excel (.xlsx, .xls), CSV, or PDF files.' 
+        });
       }
 
-      // Validate and clean the data
-      const validatedData = [];
-      const seenEmails = new Set();
-
-      for (let i = 0; i < parsedData.length; i++) {
-        const row = parsedData[i];
-        const rowNumber = i + 2; // +2 because of header row and 0-based index
-
-        // Check for required fields
-        if (!row.Name && !row.name) {
-          errors.push(`Row ${rowNumber}: Name is required`);
-          continue;
-        }
-
-        if (!row.Email && !row.email) {
-          errors.push(`Row ${rowNumber}: Email is required`);
-          continue;
-        }
-
-        // Clean and validate email
-        const email = (row.Email || row.email || '').toString().trim().toLowerCase();
-        if (!email || !email.includes('@')) {
-          errors.push(`Row ${rowNumber}: Invalid email format`);
-          continue;
-        }
-
-        // Check for duplicates
-        if (seenEmails.has(email)) {
-          duplicates++;
-          continue;
-        }
-        seenEmails.add(email);
-
-        // Create clean contact object
-        const contact = {
-          name: (row.Name || row.name || '').toString().trim(),
-          email: email,
-          phone: (row.Phone || row.phone || '').toString().trim(),
-          company: (row.Company || row.company || '').toString().trim(),
-          position: (row.Position || row.position || '').toString().trim(),
-          tags: (row.Tags || row.tags || '').toString().trim().split(',').map(tag => tag.trim()).filter(tag => tag),
-          userId: req.user.id,
-          source: 'import',
-          importedAt: new Date()
-        };
-
-        validatedData.push(contact);
-      }
-
-      // TODO: Save to database
-      // For now, we'll just return the parsed data
-      // In a real implementation, you would save to your contacts/contacts collection
-
-      // Clean up uploaded file
-      const fs = await import('fs');
+      // Clean up file after processing
       fs.unlinkSync(filePath);
+
+      // Validate and clean the data for Excel/CSV
+      let validatedData = [];
+      let errors = [];
+      let duplicates = 0;
+
+      if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+        const seenEmails = new Set();
+        
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          const rowNumber = i + 2; // +2 because of header row and 0-based index
+
+          // Normalize field names (case-insensitive)
+          const normalizedRow = {};
+          Object.keys(row).forEach(key => {
+            normalizedRow[key.toLowerCase()] = row[key];
+          });
+
+          // Check for required fields
+          const name = normalizedRow.name || row.Name || row.name;
+          const email = normalizedRow.email || row.Email || row.email;
+
+          if (!name) {
+            errors.push(`Row ${rowNumber}: Name is required`);
+            continue;
+          }
+
+          if (!email) {
+            errors.push(`Row ${rowNumber}: Email is required`);
+            continue;
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(email)) {
+            errors.push(`Row ${rowNumber}: Invalid email format: ${email}`);
+            continue;
+          }
+
+          // Check for duplicates
+          if (seenEmails.has(email.toLowerCase())) {
+            duplicates++;
+            continue;
+          }
+          seenEmails.add(email.toLowerCase());
+
+          // Create clean contact object
+          const contact = {
+            name: name.toString().trim(),
+            email: email.toString().trim().toLowerCase(),
+            phone: (normalizedRow.phone || row.Phone || row.phone || '').toString().trim(),
+            company: (normalizedRow.company || row.Company || row.company || '').toString().trim(),
+            position: (normalizedRow.position || row.Position || row.position || '').toString().trim(),
+            website: (normalizedRow.website || row.Website || row.website || '').toString().trim(),
+            location: (normalizedRow.location || row.Location || row.location || '').toString().trim(),
+            tags: (normalizedRow.tags || row.Tags || row.tags || '').toString().trim().split(',').map(tag => tag.trim()).filter(tag => tag),
+            userId: req.user.id,
+            source: 'import',
+            importedAt: new Date()
+          };
+
+          validatedData.push(contact);
+        }
+      }
+
+      // Save contacts to database for Excel/CSV files
+      let savedContacts = [];
+      let saveErrors = 0;
+      
+      if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+        logger.info(`Saving ${validatedData.length} contacts to database...`);
+        
+        for (const contactData of validatedData) {
+          try {
+            // Check if contact already exists
+            const existingContact = await Contact.findOne({
+              email: contactData.email,
+              userId: req.user.id
+            });
+
+            if (existingContact) {
+              logger.info(`Contact already exists: ${contactData.email}`);
+              duplicates++;
+              continue;
+            }
+
+            // Create new contact
+            const contact = new Contact(contactData);
+            await contact.save();
+            savedContacts.push(contact);
+            
+            logger.debug(`Contact saved: ${contactData.name} (${contactData.email})`);
+            logger.debug(`Contact data saved:`, {
+              name: contact.name,
+              email: contact.email,
+              phone: contact.phone,
+              company: contact.company,
+              position: contact.position,
+              tags: contact.tags
+            });
+          } catch (saveError) {
+            logger.error(`Failed to save contact ${contactData.email}:`, saveError);
+            logger.error(`Save error details:`, {
+              email: contactData.email,
+              name: contactData.name,
+              error: saveError.message,
+              code: saveError.code
+            });
+            errors.push(`Failed to save contact ${contactData.email}: ${saveError.message}`);
+            saveErrors++;
+          }
+        }
+        
+        logger.info(`Database save results: ${savedContacts.length} saved, ${duplicates} duplicates, ${saveErrors} errors`);
+      }
+
+      // Clean up file after processing (with error handling)
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          logger.info('Uploaded file cleaned up successfully');
+        }
+      } catch (cleanupError) {
+        logger.warn('File cleanup warning (non-critical):', cleanupError.message);
+      }
 
       res.json({
         success: true,
-        message: 'File processed successfully',
+        message: `${ext.toUpperCase()} file processed successfully`,
         data: {
-          total: parsedData.length,
+          total: data.length,
           imported: validatedData.length,
-          errors: errors.length,
+          saved: savedContacts.length,
+          errors: errors.length + saveErrors,
           duplicates: duplicates,
-          errorDetails: errors.slice(0, 10), // Return first 10 errors
-          contacts: validatedData.slice(0, 5) // Return first 5 contacts as sample
+          errorDetails: errors.slice(0, 10),
+          contacts: ext === 'pdf' ? data : savedContacts.slice(0, 5)
         }
       });
 
     } catch (parseError) {
       logger.error('File parsing error:', parseError);
       
-      // Clean up uploaded file
-      const fs = await import('fs');
-      fs.unlinkSync(filePath);
+      // Clean up file if it exists
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (cleanupError) {
+        logger.error('Error cleaning up file:', cleanupError);
+      }
 
-      res.status(400).json({
+      res.status(500).json({
         success: false,
         message: 'Failed to parse file',
-        error: parseError.message
+        error: parseError.message,
+        details: {
+          fileName: fileName,
+          filePath: filePath,
+          fileExists: fs.existsSync(filePath),
+          fileSize: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0
+        }
       });
     }
 

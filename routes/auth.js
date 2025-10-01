@@ -85,20 +85,20 @@ router.post('/register', [
               <p>Hi ${user.name},</p>
               <p>Thank you for registering with Marketing Firm. Please verify your email address by clicking the button below:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="http://localhost:3001/verify-email?token=${emailVerificationToken}" // Hardcoded frontend URL 
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${emailVerificationToken}" 
                    style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Verify Email Address
                 </a>
               </div>
               <p>If the button doesn't work, copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #666;">
-                http://localhost:3001/verify-email?token=${emailVerificationToken} // Hardcoded frontend URL
+                ${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${emailVerificationToken}
               </p>
               <p>This link will expire in 24 hours.</p>
               <p>Best regards,<br>The Marketing Firm Team</p>
             </div>
           `,
-          text: `Welcome to Marketing Firm! Please verify your email by visiting: http://localhost:3001/verify-email?token=${emailVerificationToken}` // Hardcoded frontend URL
+          text: `Welcome to Marketing Firm! Please verify your email by visiting: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${emailVerificationToken}`
         },
         from: {
           email: 'oloogeorge633@gmail.com', // Hardcoded email
@@ -497,14 +497,14 @@ router.post('/forgot-password', [
               <p>Hi ${user.name},</p>
               <p>You requested to reset your password. Click the button below to reset your password:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="http://localhost:3001/reset-password?token=${resetToken}" // Hardcoded frontend URL 
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}" 
                    style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Reset Password
                 </a>
               </div>
               <p>If the button doesn't work, copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #666;">
-                http://localhost:3001/reset-password?token=${resetToken} // Hardcoded frontend URL
+                ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}
               </p>
               <p>This link will expire in 1 hour.</p>
               <p>If you didn't request this password reset, please ignore this email.</p>
@@ -691,14 +691,14 @@ router.post('/resend-verification', protect, async (req, res) => {
               <p>Hi ${user.name},</p>
               <p>Please verify your email address by clicking the button below:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="http://localhost:3001/verify-email?token=${emailVerificationToken}" // Hardcoded frontend URL 
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${emailVerificationToken}" 
                    style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Verify Email Address
                 </a>
               </div>
               <p>If the button doesn't work, copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #666;">
-                http://localhost:3001/verify-email?token=${emailVerificationToken} // Hardcoded frontend URL
+                ${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${emailVerificationToken}
               </p>
               <p>This link will expire in 24 hours.</p>
               <p>Best regards,<br>The Marketing Firm Team</p>
